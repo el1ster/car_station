@@ -91,7 +91,7 @@ class CarDetailsWindow(QMainWindow):
             layout.addWidget(status_label)
 
             cursor.execute("""
-                SELECT Service.ServiceName, Service.Description, Service.Cost 
+                SELECT Service.ServiceName, Service.Description, Service.Cost, OrderService.Quantity 
                 FROM OrderService 
                 JOIN Service ON OrderService.Service = Service.ServiceID 
                 WHERE OrderService.`Order` = (
@@ -99,7 +99,11 @@ class CarDetailsWindow(QMainWindow):
                 )
             """, (self.car_data[0],))
             services = cursor.fetchall()
-            service_details = "\n\n".join([f"Послуга: {s[0]}\nОпис: {s[1]}\nЦіна: {s[2]}" for s in services])
+            cursor.close()
+            conn.close()
+
+            service_details = "\n\n".join(
+                [f"Послуга: {s[0]}\nОпис: {s[1]}\nЦіна: {s[2]}\nКількість: {s[3]}" for s in services])
             services_label = QLabel(service_details if service_details else "Немає послуг")
             layout.addWidget(services_label)
 
@@ -371,11 +375,31 @@ class AdminWindow(QMainWindow):
                 "SELECT CarID, Make, Model, Year, OwnerID, LicensePlate, VIN FROM Car WHERE CarID = %s",
                 (car_id,))
             car = cursor.fetchone()
-            cursor.close()
-            conn.close()
 
             if car:
-                details = f"ID: {car[0]}\nМарка: {car[1]}\nМодель: {car[2]}\nРік: {car[3]}\nID Власника: {car[4]}\nНомерний знак: {car[5]}\nVIN: {car[6]}"
+                # Получение списка услуг для автомобиля
+                cursor.execute("""
+                    SELECT Service.ServiceName, Service.Description, Service.Cost, OrderService.Quantity 
+                    FROM OrderService 
+                    JOIN Service ON OrderService.Service = Service.ServiceID 
+                    WHERE OrderService.`Order` = (
+                        SELECT OrderID FROM `Order` WHERE Car = %s ORDER BY OrderDate DESC LIMIT 1
+                    )
+                """, (car[0],))
+                services = cursor.fetchall()
+
+                # Подсчет общей стоимости услуг
+                total_cost = sum(s[2] * s[3] for s in services)
+
+                cursor.close()
+                conn.close()
+
+                service_details = "\n\n".join(
+                    [f"Послуга: {s[0]}\nОпис: {s[1]}\нЦіна: {s[2]}\nКількість: {s[3]}" for s in services])
+                if not service_details:
+                    service_details = "Немає послуг"
+
+                details = f"ID: {car[0]}\nМарка: {car[1]}\nМодель: {car[2]}\нРік: {car[3]}\нID Власника: {car[4]}\нНомерний знак: {car[5]}\нVIN: {car[6]}\n\nПослуги:\n{service_details}\n\nЗагальна сума послуг: {total_cost} грн"
                 msg_box = QMessageBox(self)
                 msg_box.setWindowTitle("Детальна інформація про авто")
                 msg_box.setText(details)
@@ -389,6 +413,8 @@ class AdminWindow(QMainWindow):
                 elif msg_box.clickedButton() == delete_button:
                     self.deleteCar(car[0])
             else:
+                cursor.close()
+                conn.close()
                 QMessageBox.warning(self, "Помилка", "Авто з таким ID не знайдено")
         except mysql.connector.Error as err:
             self.show_error_message(f"Сталася помилка з базою даних: {err}")

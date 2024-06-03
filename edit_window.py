@@ -1,14 +1,14 @@
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QFormLayout, QTextEdit, QMessageBox,
-                             QComboBox)
+                             QComboBox, QCheckBox, QHBoxLayout)
 import mysql.connector
 from config import DB_CONFIG
-
 
 class EditWindow(QDialog):
     def __init__(self, data, is_car=True):
         super().__init__()
         self.data = data
         self.is_car = is_car
+        self.service_checkboxes = []
         try:
             self.initUI()
         except Exception as e:
@@ -17,7 +17,7 @@ class EditWindow(QDialog):
     def initUI(self):
         try:
             self.setWindowTitle("Редагування даних")
-            self.setGeometry(100, 100, 400, 400)  # Увеличение размера окна
+            self.setGeometry(100, 100, 400, 600)  # Увеличение размера окна
             layout = QVBoxLayout()
 
             form_layout = QFormLayout()
@@ -49,8 +49,35 @@ class EditWindow(QDialog):
                     if index != -1:
                         self.status_combo.setCurrentIndex(index)
 
+                # Загрузка текущих услуг из таблицы OrderService
+                conn = mysql.connector.connect(**DB_CONFIG)
+                cursor = conn.cursor()
+                cursor.execute("SELECT Service FROM OrderService WHERE `Order` = (SELECT OrderID FROM `Order` WHERE Car = %s ORDER BY OrderDate DESC LIMIT 1)", (self.data[0],))
+                current_services = cursor.fetchall()
+                current_services = [service[0] for service in current_services]
+
+                # Загрузка всех услуг из таблицы Service
+                cursor.execute("SELECT ServiceID, ServiceName FROM Service")
+                all_services = cursor.fetchall()
+                cursor.close()
+                conn.close()
+
+                layout.addLayout(form_layout)
+
+                services_layout = QVBoxLayout()
+                services_layout.addWidget(QLabel("Виберіть послуги:"))
+
+                for service_id, service_name in all_services:
+                    checkbox = QCheckBox(service_name)
+                    if service_id in current_services:
+                        checkbox.setChecked(True)
+                    self.service_checkboxes.append((service_id, checkbox))
+                    services_layout.addWidget(checkbox)
+
+                layout.addLayout(services_layout)
+
             else:
-                fields = ["ClientID", "Name", "Surname", "Phone", "Email", "Login", "ClientPhoto"]
+                fields = ["ClientID", "Name", "Surname", "Phone", "Email", "Login"]
                 for i, field in enumerate(fields):
                     label = QLabel(field)
                     line_edit = QLineEdit(str(self.data[i]))
@@ -58,7 +85,7 @@ class EditWindow(QDialog):
                     form_layout.addRow(label, line_edit)
                     self.inputs.append(line_edit)
 
-            layout.addLayout(form_layout)
+                layout.addLayout(form_layout)
 
             save_button = QPushButton("Зберегти")
             save_button.clicked.connect(self.saveData)
@@ -93,14 +120,24 @@ class EditWindow(QDialog):
                 """
                 cursor.execute(query, (status, int(updated_data[0])))
 
+                # Обновление услуг в таблице OrderService
+                query = "SELECT OrderID FROM `Order` WHERE Car = %s ORDER BY OrderDate DESC LIMIT 1"
+                cursor.execute(query, (updated_data[0],))
+                order_id = cursor.fetchone()[0]
+
+                cursor.execute("DELETE FROM OrderService WHERE `Order` = %s", (order_id,))
+                for service_id, checkbox in self.service_checkboxes:
+                    if checkbox.isChecked():
+                        cursor.execute("INSERT INTO OrderService (`Order`, Service, Quantity) VALUES (%s, %s, %s)", (order_id, service_id, 1))
+
             else:
                 query = """
-                UPDATE Client SET Name = %s, Surname = %s, Phone = %s, Email = %s, Login = %s, ClientPhoto = %s
+                UPDATE Client SET Name = %s, Surname = %s, Phone = %s, Email = %s, Login = %s
                 WHERE ClientID = %s
                 """
                 cursor.execute(query, (
                     updated_data[1], updated_data[2], updated_data[3], updated_data[4], updated_data[5],
-                    updated_data[6], int(updated_data[0])))
+                    int(updated_data[0])))
 
             conn.commit()
             cursor.close()
