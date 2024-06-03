@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QMainWindow, QLabel, QVBoxLayout, QWidget, QTabWidget,
-                             QScrollArea, QHBoxLayout, QFrame, QPushButton, QFileDialog, QMessageBox)
+                             QScrollArea, QHBoxLayout, QFrame, QPushButton, QFileDialog, QMessageBox, QTextEdit)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 import os
@@ -13,7 +13,7 @@ class CarDetailsWindow(QMainWindow):
         super().__init__()
         self.car_data = car_data
         self.setWindowTitle(f"Детальна інформація про авто: {car_data[1]} {car_data[2]}")
-        self.setGeometry(200, 200, 400, 500)
+        self.setGeometry(200, 200, 600, 600)
         try:
             self.initUI()
         except Exception as e:
@@ -39,7 +39,8 @@ class CarDetailsWindow(QMainWindow):
             layout.addWidget(car_photo_label)
 
             # Поле для отображения описания
-            detail_label = QLabel(self.car_data[7] if self.car_data[7] else "Немає опису")
+            detail_label = QTextEdit(self)
+            detail_label.setReadOnly(True)
             layout.addWidget(QLabel("Опис ремонту:"))
             layout.addWidget(detail_label)
 
@@ -49,11 +50,32 @@ class CarDetailsWindow(QMainWindow):
             cursor.execute("SELECT Status FROM `Order` WHERE Car = %s ORDER BY OrderDate DESC LIMIT 1",
                            (self.car_data[0],))
             order_status = cursor.fetchone()
-            cursor.close()
-            conn.close()
-
             status_label = QLabel(f"Статус: {order_status[0]}" if order_status else "Статус: Немає даних")
             layout.addWidget(status_label)
+
+            # Получение услуг и их стоимости
+            cursor.execute("""
+                SELECT s.ServiceName, s.Description, s.Cost 
+                FROM orderservice os
+                JOIN service s ON os.Service = s.ServiceID
+                JOIN `Order` o ON os.Order = o.OrderID
+                WHERE o.Car = %s
+            """, (self.car_data[0],))
+            services = cursor.fetchall()
+
+            if services:
+                details_text = ""
+                total_cost = 0
+                for service in services:
+                    details_text += f"{service[0]}: {service[1]} (Вартість: {service[2]})\n"
+                    total_cost += service[2]
+                detail_label.setPlainText(details_text)
+                layout.addWidget(QLabel(f"Загальна вартість ремонту: {total_cost}"))
+            else:
+                detail_label.setPlainText("Немає опису")
+
+            cursor.close()
+            conn.close()
 
             container = QWidget()
             container.setLayout(layout)
@@ -145,7 +167,7 @@ class UserWindow(QMainWindow):
             conn = mysql.connector.connect(**DB_CONFIG)
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT CarID, Make, Model, Year, LicensePlate, CarPhoto, VIN, CarDetail FROM Car WHERE OwnerID = %s",
+                "SELECT CarID, Make, Model, Year, LicensePlate, CarPhoto, VIN FROM Car WHERE OwnerID = %s",
                 (self.user_data[0],))
             cars = cursor.fetchall()
 
