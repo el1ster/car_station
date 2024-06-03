@@ -57,7 +57,7 @@ class LoginWindow(QMainWindow):
             loginU = "ivanlogin"
             passwordU = "ivanpass"
             query = "SELECT * FROM Client WHERE Login = %s AND Password = %s"
-            self.cursor.execute(query, (loginU, passwordU))
+            self.cursor.execute(query, (login, password))
             result = self.cursor.fetchone()
             if result:
                 self.user_window = UserWindow(result)
@@ -73,8 +73,8 @@ class LoginWindow(QMainWindow):
         try:
             login = self.login_input.text()
             password = self.password_input.text()
-            loginA = "adminManager"
-            passwordA = "manager123"
+            loginA = "adminSales"
+            passwordA = "sales123"
             query = "SELECT * FROM Admin WHERE Login = %s AND Password = %s"
             self.cursor.execute(query, (loginA, passwordA))
             result = self.cursor.fetchone()

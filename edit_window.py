@@ -85,6 +85,18 @@ class EditWindow(QDialog):
                     form_layout.addRow(label, line_edit)
                     self.inputs.append(line_edit)
 
+                # Добавление поля для пароля
+                password_label = QLabel("Новий пароль")
+                self.password_input = QLineEdit()
+                self.password_input.setEchoMode(QLineEdit.Password)
+                form_layout.addRow(password_label, self.password_input)
+
+                # Добавление поля для текущего пароля
+                current_password_label = QLabel("Поточний пароль")
+                self.current_password_input = QLineEdit()
+                self.current_password_input.setEchoMode(QLineEdit.Password)
+                form_layout.addRow(current_password_label, self.current_password_input)
+
                 layout.addLayout(form_layout)
 
             save_button = QPushButton("Зберегти")
@@ -139,6 +151,19 @@ class EditWindow(QDialog):
                     updated_data[1], updated_data[2], updated_data[3], updated_data[4], updated_data[5],
                     int(updated_data[0])))
 
+                # Обновление пароля, если введен
+                if self.password_input.text():
+                    # Проверка текущего пароля
+                    query = "SELECT Password FROM Client WHERE ClientID = %s"
+                    cursor.execute(query, (int(updated_data[0]),))
+                    current_password = cursor.fetchone()[0]
+
+                    if self.current_password_input.text() == current_password:
+                        query = "UPDATE Client SET Password = %s WHERE ClientID = %s"
+                        cursor.execute(query, (self.password_input.text(), int(updated_data[0])))
+                    else:
+                        raise ValueError("Поточний пароль неправильний")
+
             conn.commit()
             cursor.close()
             conn.close()
@@ -146,7 +171,7 @@ class EditWindow(QDialog):
             QMessageBox.information(self, "Успіх", "Дані успішно оновлено")
             self.accept()
         except ValueError as ve:
-            self.show_error_message(f"Помилка конвертації даних: {ve}")
+            self.show_error_message(f"Помилка: {ve}")
         except mysql.connector.Error as err:
             self.show_error_message(f"Помилка бази даних: {err}")
         except Exception as e:

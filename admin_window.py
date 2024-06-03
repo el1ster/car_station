@@ -52,10 +52,11 @@ class SearchThread(QThread):
 
 
 class CarDetailsWindow(QMainWindow):
-    def __init__(self, car_data, parent):
+    def __init__(self, car_data, parent, access_level):
         super().__init__()
         self.car_data = car_data
         self.parent = parent
+        self.access_level = access_level
         self.setWindowTitle(f"Детальна інформація про авто: {car_data[1]} {car_data[2]}")
         self.setGeometry(200, 200, 400, 500)
         try:
@@ -102,9 +103,13 @@ class CarDetailsWindow(QMainWindow):
             cursor.close()
             conn.close()
 
-            service_details = "\n\n".join(
-                [f"Послуга: {s[0]}\nОпис: {s[1]}\nЦіна: {s[2]}\nКількість: {s[3]}" for s in services])
-            services_label = QLabel(service_details if service_details else "Немає послуг")
+            service_details = "\n\n".join([f"Послуга: {s[0]}\nОпис: {s[1]}\nЦіна: {s[2]}\nКількість: {s[3]}" for s in services])
+            if not service_details:
+                service_details = "Немає послуг"
+            total_cost = sum(s[2] * s[3] for s in services)
+
+            details = f"{service_details}\n\nЗагальна сума послуг: {total_cost} грн"
+            services_label = QLabel(details)
             layout.addWidget(services_label)
 
             container = QWidget()
@@ -116,13 +121,14 @@ class CarDetailsWindow(QMainWindow):
             ok_button.clicked.connect(self.close)
             buttons_layout.addWidget(ok_button)
 
-            edit_button = QPushButton("Змінити дані")
-            edit_button.clicked.connect(self.edit_car)
-            buttons_layout.addWidget(edit_button)
+            if self.access_level in [2, 3]:
+                edit_button = QPushButton("Змінити дані")
+                edit_button.clicked.connect(self.edit_car)
+                buttons_layout.addWidget(edit_button)
 
-            delete_button = QPushButton("Видалити")
-            delete_button.clicked.connect(self.delete_car)
-            buttons_layout.addWidget(delete_button)
+                delete_button = QPushButton("Видалити")
+                delete_button.clicked.connect(self.delete_car)
+                buttons_layout.addWidget(delete_button)
 
             layout.addLayout(buttons_layout)
         except Exception as e:
@@ -208,33 +214,41 @@ class AdminWindow(QMainWindow):
             users_button.clicked.connect(lambda: self.tabs.setCurrentWidget(self.users_tab))
             buttons_layout.addWidget(users_button)
 
-            new_car_button = QPushButton("Додати нову машину")
-            new_car_button.clicked.connect(self.createNewCar)
-            buttons_layout.addWidget(new_car_button)
+            if self.admin_data[4] in [1, 3]:
+                new_user_button = QPushButton("Додати нового користувача")
+                new_user_button.clicked.connect(self.createNewUser)
+                buttons_layout.addWidget(new_user_button)
 
-            new_user_button = QPushButton("Додати нового користувача")
-            new_user_button.clicked.connect(self.createNewUser)
-            buttons_layout.addWidget(new_user_button)
+            if self.admin_data[4] in [2, 3]:
+                new_car_button = QPushButton("Додати нову машину")
+                new_car_button.clicked.connect(self.createNewCar)
+                buttons_layout.addWidget(new_car_button)
 
             layout.addLayout(buttons_layout)
         except Exception as e:
             self.show_error_message(f"Сталася помилка при ініціалізації головної вкладки: {e}")
 
     def createNewCar(self):
-        try:
-            create_window = CreateNewItemWindow(is_car=True)
-            create_window.exec_()
-            self.loadCarsData()
-        except Exception as e:
-            self.show_error_message(f"Сталася помилка при створенні нової машини: {e}")
+        if self.admin_data[4] in [2, 3]:
+            try:
+                create_window = CreateNewItemWindow(is_car=True)
+                create_window.exec_()
+                self.loadCarsData()
+            except Exception as e:
+                self.show_error_message(f"Сталася помилка при створенні нової машини: {e}")
+        else:
+            self.show_error_message("У вас немає прав на створення нових машин.")
 
     def createNewUser(self):
-        try:
-            create_window = CreateNewItemWindow(is_car=False)
-            create_window.exec_()
-            self.loadUsersData()
-        except Exception as e:
-            self.show_error_message(f"Сталася помилка при створенні нового користувача: {e}")
+        if self.admin_data[4] in [1, 3]:
+            try:
+                create_window = CreateNewItemWindow(is_car=False)
+                create_window.exec_()
+                self.loadUsersData()
+            except Exception as e:
+                self.show_error_message(f"Сталася помилка при створенні нового користувача: {e}")
+        else:
+            self.show_error_message("У вас немає прав на створення нових користувачів.")
 
     def initCarsTab(self):
         try:
@@ -394,12 +408,11 @@ class AdminWindow(QMainWindow):
                 cursor.close()
                 conn.close()
 
-                service_details = "\n\n".join(
-                    [f"Послуга: {s[0]}\nОпис: {s[1]}\нЦіна: {s[2]}\nКількість: {s[3]}" for s in services])
+                service_details = "\n\n".join([f"Послуга: {s[0]}\nОпис: {s[1]}\nЦіна: {s[2]}\nКількість: {s[3]}" for s in services])
                 if not service_details:
                     service_details = "Немає послуг"
 
-                details = f"ID: {car[0]}\nМарка: {car[1]}\nМодель: {car[2]}\нРік: {car[3]}\нID Власника: {car[4]}\нНомерний знак: {car[5]}\нVIN: {car[6]}\n\nПослуги:\n{service_details}\n\nЗагальна сума послуг: {total_cost} грн"
+                details = f"ID: {car[0]}\nМарка: {car[1]}\nМодель: {car[2]}\nРік: {car[3]}\nID Власника: {car[4]}\nНомерний знак: {car[5]}\nVIN: {car[6]}\n\nПослуги:\n{service_details}\n\nЗагальна сума послуг: {total_cost} грн"
                 msg_box = QMessageBox(self)
                 msg_box.setWindowTitle("Детальна інформація про авто")
                 msg_box.setText(details)
@@ -422,43 +435,49 @@ class AdminWindow(QMainWindow):
             self.show_error_message(f"Сталася невідома помилка: {e}")
 
     def deleteCar(self, car_id):
-        try:
-            confirm = QMessageBox.question(self, 'Підтвердження',
-                                           'Ви впевнені, що хочете видалити це авто та всі пов\'язані з ним дані?',
-                                           QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            if confirm == QMessageBox.Yes:
-                conn = mysql.connector.connect(**DB_CONFIG)
-                cursor = conn.cursor()
+        if self.admin_data[4] in [2, 3]:
+            try:
+                confirm = QMessageBox.question(self, 'Підтвердження',
+                                               'Ви впевнені, що хочете видалити це авто та всі пов\'язані з ним дані?',
+                                               QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                if confirm == QMessageBox.Yes:
+                    conn = mysql.connector.connect(**DB_CONFIG)
+                    cursor = conn.cursor()
 
-                # Видалити пов'язані записи з таблиці orderservice
-                cursor.execute("DELETE FROM orderservice WHERE `Order` IN (SELECT OrderID FROM `order` WHERE Car = %s)",
-                               (car_id,))
+                    # Видалити пов'язані записи з таблиці orderservice
+                    cursor.execute("DELETE FROM orderservice WHERE `Order` IN (SELECT OrderID FROM `order` WHERE Car = %s)",
+                                   (car_id,))
 
-                # Видалити пов'язані записи з таблиці order
-                cursor.execute("DELETE FROM `order` WHERE Car = %s", (car_id,))
+                    # Видалити пов'язані записи з таблиці order
+                    cursor.execute("DELETE FROM `order` WHERE Car = %s", (car_id,))
 
-                # Видалити автомобіль з таблиці car
-                cursor.execute("DELETE FROM car WHERE CarID = %s", (car_id,))
+                    # Видалити автомобіль з таблиці car
+                    cursor.execute("DELETE FROM car WHERE CarID = %s", (car_id,))
 
-                conn.commit()
-                cursor.close()
-                conn.close()
+                    conn.commit()
+                    cursor.close()
+                    conn.close()
 
-                QMessageBox.information(self, "Успіх", "Автомобіль успішно видалено")
-                self.loadCarsData()
-        except mysql.connector.Error as err:
-            self.show_error_message(f"Помилка бази даних: {err}")
-        except Exception as e:
-            self.show_error_message(f"Невідома помилка: {e}")
+                    QMessageBox.information(self, "Успіх", "Автомобіль успішно видалено")
+                    self.loadCarsData()
+            except mysql.connector.Error as err:
+                self.show_error_message(f"Помилка бази даних: {err}")
+            except Exception as e:
+                self.show_error_message(f"Невідома помилка: {e}")
+        else:
+            self.show_error_message("У вас немає прав на видалення автомобілів.")
 
     def editCar(self, car_data):
-        try:
-            edit_window = EditWindow(car_data, is_car=True)
-            edit_window.exec_()
-            self.loadCarsData()
-            self.updateTable("cars")
-        except Exception as e:
-            self.show_error_message(f"Сталася помилка при редагуванні автомобіля: {e}")
+        if self.admin_data[4] in [2, 3]:
+            try:
+                edit_window = EditWindow(car_data, is_car=True)
+                edit_window.exec_()
+                self.loadCarsData()
+                self.updateTable("cars")
+            except Exception as e:
+                self.show_error_message(f"Сталася помилка при редагуванні автомобіля: {e}")
+        else:
+            self.show_error_message("У вас немає прав на редагування автомобілів.")
 
     def searchClient(self):
         try:
@@ -494,42 +513,49 @@ class AdminWindow(QMainWindow):
             self.show_error_message(f"Сталася невідома помилка: {e}")
 
     def deleteClient(self, client_id):
-        try:
-            conn = mysql.connector.connect(**DB_CONFIG)
-            cursor = conn.cursor()
-            cursor.execute("SELECT CarID, Make, Model FROM Car WHERE OwnerID = %s", (client_id,))
-            cars = cursor.fetchall()
-            car_list = "\n".join([f"ID: {car[0]}, Марка: {car[1]}, Модель: {car[2]}" for car in cars])
+        if self.admin_data[4] in [1, 3]:
+            try:
+                conn = mysql.connector.connect(**DB_CONFIG)
+                cursor = conn.cursor()
+                cursor.execute("SELECT CarID, Make, Model FROM Car WHERE OwnerID = %s", (client_id,))
+                cars = cursor.fetchall()
+                car_list = "\n".join([f"ID: {car[0]}, Марка: {car[1]}, Модель: {car[2]}" for car in cars])
 
-            confirm_text = f"Ви впевнені, що хочете видалити цього клієнта та всі його автомобілі?\n\n{car_list}"
-            confirm = QMessageBox.question(self, 'Підтвердження', confirm_text,
-                                           QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            if confirm == QMessageBox.Yes:
-                # Видалити пов'язані автомобілі та їхні записи
-                for car in cars:
-                    self.deleteCar(car[0])
+                confirm_text = f"Ви впевнені, що хочете видалити цього клієнта та всі його автомобілі?\n\n{car_list}"
+                confirm = QMessageBox.question(self, 'Підтвердження', confirm_text,
+                                               QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                if confirm == QMessageBox.Yes:
+                    # Видалити пов'язані автомобілі та їхні записи
+                    for car in cars:
+                        self.deleteCar(car[0])
 
-                # Видалити клієнта
-                cursor.execute("DELETE FROM Client WHERE ClientID = %s", (client_id,))
+                    # Видалити клієнта
+                    cursor.execute("DELETE FROM Client WHERE ClientID = %s", (client_id,))
 
-                conn.commit()
-                cursor.close()
-                conn.close()
+                    conn.commit()
+                    cursor.close()
+                    conn.close()
 
-                QMessageBox.information(self, "Успіх", "Клієнта та всі його автомобілі успішно видалено")
-                self.loadUsersData()
-        except mysql.connector.Error as err:
-            self.show_error_message(f"Помилка бази даних: {err}")
-        except Exception as e:
-            self.show_error_message(f"Невідома помилка: {e}")
+                    QMessageBox.information(self, "Успіх", "Клієнта та всі його автомобілі успішно видалено")
+                    self.loadUsersData()
+            except mysql.connector.Error as err:
+                self.show_error_message(f"Помилка бази даних: {err}")
+            except Exception as e:
+                self.show_error_message(f"Невідома помилка: {e}")
+        else:
+            self.show_error_message("У вас немає прав на видалення клієнтів.")
 
     def editClient(self, client_data):
-        try:
-            edit_window = EditWindow(client_data, is_car=False)
-            edit_window.exec_()
-            self.loadUsersData()
-        except Exception as e:
-            self.show_error_message(f"Сталася помилка при редагуванні клієнта: {e}")
+        if self.admin_data[4] in [1, 3]:
+            try:
+                edit_window = EditWindow(client_data, is_car=False)
+                edit_window.exec_()
+                self.loadUsersData()
+                self.updateTable("user")
+            except Exception as e:
+                self.show_error_message(f"Сталася помилка при редагуванні клієнта: {e}")
+        else:
+            self.show_error_message("У вас немає прав на редагування клієнтів.")
 
     def applyStyleSheet(self):
         try:
