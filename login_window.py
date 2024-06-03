@@ -1,6 +1,5 @@
-# login_window.py
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLineEdit, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLineEdit, QVBoxLayout, QWidget, QMessageBox
 from user_window import UserWindow
 from admin_window import AdminWindow
 import mysql.connector
@@ -12,8 +11,11 @@ class LoginWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Система входу")
         self.setGeometry(100, 100, 280, 150)
-        self.initUI()
-        self.db_connection()
+        try:
+            self.initUI()
+            self.db_connection()
+        except Exception as e:
+            self.show_error_message(f"Сталася помилка при ініціалізації: {e}")
 
     def initUI(self):
         layout = QVBoxLayout()
@@ -40,37 +42,58 @@ class LoginWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
     def db_connection(self):
-        self.conn = mysql.connector.connect(
-            host=DB_CONFIG['host'],
-            port=DB_CONFIG['port'],
-            user=DB_CONFIG['user'],
-            password=DB_CONFIG['password'],
-            database=DB_CONFIG['database']
-        )
-        self.cursor = self.conn.cursor()
+        try:
+            self.conn = mysql.connector.connect(**DB_CONFIG)
+            self.cursor = self.conn.cursor()
+        except mysql.connector.Error as err:
+            self.show_error_message(f"Сталася помилка з базою даних: {err}")
+        except Exception as e:
+            self.show_error_message(f"Сталася невідома помилка: {e}")
 
     def login_as_user(self):
-        login = self.login_input.text()
-        password = self.password_input.text()
-        login1 = "ivanlogin"
-        password1 = "ivanpass"
-        query = "SELECT * FROM Client WHERE Login = %s AND Password = %s"
-        self.cursor.execute(query, (login, password))
-        result = self.cursor.fetchone()
-        if result:
-            self.user_window = UserWindow(result)
-            self.user_window.show()
-        else:
-            print("Невірний логін або пароль")
+        try:
+            login = self.login_input.text()
+            password = self.password_input.text()
+            loginU = "ivanlogin"
+            passwordU = "ivanpass"
+            query = "SELECT * FROM Client WHERE Login = %s AND Password = %s"
+            self.cursor.execute(query, (loginU, passwordU))
+            result = self.cursor.fetchone()
+            if result:
+                self.user_window = UserWindow(result)
+                self.user_window.show()
+            else:
+                self.show_error_message("Невірний логін або пароль")
+        except mysql.connector.Error as err:
+            self.show_error_message(f"Сталася помилка з базою даних: {err}")
+        except Exception as e:
+            self.show_error_message(f"Сталася невідома помилка: {e}")
 
     def login_as_admin(self):
-        login = self.login_input.text()
-        password = self.password_input.text()
-        query = "SELECT * FROM Admin WHERE Login = %s AND Password = %s"
-        self.cursor.execute(query, (login, password))
-        result = self.cursor.fetchone()
-        if result:
-            self.admin_window = AdminWindow(result)
-            self.admin_window.show()
-        else:
-            print("Невірний логін або пароль")
+        try:
+            login = self.login_input.text()
+            password = self.password_input.text()
+            loginA = "adminManager"
+            passwordA = "manager123"
+            query = "SELECT * FROM Admin WHERE Login = %s AND Password = %s"
+            self.cursor.execute(query, (loginA, passwordA))
+            result = self.cursor.fetchone()
+            if result:
+                self.admin_window = AdminWindow(result)
+                self.admin_window.show()
+            else:
+                self.show_error_message("Невірний логін або пароль")
+        except mysql.connector.Error as err:
+            self.show_error_message(f"Сталася помилка з базою даних: {err}")
+        except Exception as e:
+            self.show_error_message(f"Сталася невідома помилка: {e}")
+
+    def show_error_message(self, message):
+        QMessageBox.critical(self, "Помилка", message)
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    win = LoginWindow()
+    win.show()
+    sys.exit(app.exec_())

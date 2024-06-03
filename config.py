@@ -8,3 +8,9 @@ DB_CONFIG = {
 }
 
 STYLE_SHEET_PATH = "style.qss"
+
+loginU = "ivanlogin"
+passwordU = "ivanpass"
+
+loginA = "adminManager"
+passwordA = "manager123"
