@@ -13,7 +13,7 @@ class CarDetailsWindow(QMainWindow):
         super().__init__()
         self.car_data = car_data
         self.setWindowTitle(f"Детальна інформація про авто: {car_data[1]} {car_data[2]}")
-        self.setGeometry(200, 200, 600, 600)
+        self.setGeometry(200, 200, 600, 900)
         try:
             self.initUI()
         except Exception as e:
@@ -30,10 +30,10 @@ class CarDetailsWindow(QMainWindow):
             layout.addWidget(car_info_label)
 
             car_photo_label = QLabel()
-            car_photo_path = os.path.join('car_photos', f'{self.car_data[0]}.jpg')
+            car_photo_path = os.path.join('car_photos', f'Car_{self.car_data[0]}.jpg')
             if os.path.exists(car_photo_path):
                 car_pixmap = QPixmap(car_photo_path)
-                car_photo_label.setPixmap(car_pixmap.scaled(300, 300, Qt.KeepAspectRatio))
+                car_photo_label.setPixmap(car_pixmap.scaled(400, 400, Qt.KeepAspectRatio))
             else:
                 car_photo_label.setText("Немає фото")
             layout.addWidget(car_photo_label)
@@ -92,7 +92,7 @@ class UserWindow(QMainWindow):
         super().__init__()
         self.user_data = user_data
         self.setWindowTitle(f"Користувач: {user_data[1]} {user_data[2]}")
-        self.setGeometry(100, 100, 640, 480)
+        self.setGeometry(100, 100, 900, 900)
         try:
             self.initUI()
             self.applyStyleSheet()
@@ -121,10 +121,10 @@ class UserWindow(QMainWindow):
             h_layout = QHBoxLayout()
 
             photo_label = QLabel()
-            photo_path = os.path.join('user_photos', f'{self.user_data[0]}.jpg')
+            photo_path = os.path.join('user_photos', f'User_{self.user_data[0]}.jpg')
             if os.path.exists(photo_path):
                 pixmap = QPixmap(photo_path)
-                photo_label.setPixmap(pixmap.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+                photo_label.setPixmap(pixmap.scaled(400, 400, Qt.KeepAspectRatio, Qt.SmoothTransformation))
             else:
                 photo_label.setText("Немає фото")
             photo_label.setObjectName("PhotoLabel")
@@ -143,11 +143,37 @@ class UserWindow(QMainWindow):
             h_layout.addLayout(info_layout)
             layout.addLayout(h_layout)
 
-            upload_button = QPushButton("Завантажити фото")
-            layout.addWidget(upload_button)
-            upload_button.clicked.connect(lambda: self.uploadPhoto(self.user_data[0], photo_label))
+            upload_user_photo_button = QPushButton("Завантажити фото")
+            layout.addWidget(upload_user_photo_button)
+            upload_user_photo_button.clicked.connect(
+                lambda ch, user_id=self.user_data[0]: self.uploadUserPhoto(user_id))
         except Exception as e:
             self.show_error_message(f"Сталася помилка при ініціалізації особистого кабінету: {e}")
+
+    def uploadUserPhoto(self, user_id):
+        try:
+            path, _ = QFileDialog.getOpenFileName(self, "Вибрати фото користувача", "", "Image files (*.jpg *.png)")
+            if path:
+                filename = os.path.join('user_photos', f'User_{user_id}.jpg')
+                self.ensure_directory_exists('user_photos')
+                if os.path.exists(filename):
+                    reply = QMessageBox.question(self, 'Підтвердження', 'Фото користувача вже існує. Замінити його?',
+                                                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                    if reply == QMessageBox.No:
+                        return
+                shutil.copy(path, filename)
+                # Оновлюємо QLabel з фото користувача, якщо він існує, встановлюючи нове зображення за допомогою setPixmap
+                photo_label = self.findChild(QLabel, "PhotoLabel")
+                if photo_label:
+                    pixmap = QPixmap(path)
+                    photo_label.setPixmap(pixmap.scaled(400, 400, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+                # Оновлюємо шлях до фото в базі даних
+                conn = mysql.connector.connect(**DB_CONFIG)
+                cursor = conn.cursor()
+                cursor.execute("UPDATE Client SET ClientPhoto = %s WHERE ClientID = %s", (filename, user_id))
+                conn.commit()
+        except Exception as e:
+            self.show_error_message(f"Сталася помилка при завантаженні фото користувача: {e}")
 
     def applyStyleSheet(self):
         try:
@@ -173,28 +199,37 @@ class UserWindow(QMainWindow):
 
             for car in cars:
                 car_frame = QFrame()
-                car_layout = QHBoxLayout()
+                car_layout = QVBoxLayout()  # Вертикальний макет для кожного автомобіля
+
+                # Перший рядок з фото та описом автомобіля
+                car_info_layout = QHBoxLayout()  # Горизонтальний макет для фото та опису
                 car_photo_label = QLabel()
-                car_photo_path = os.path.join('car_photos', f'{car[0]}.jpg')
+                car_photo_path = os.path.join('car_photos', f'Car_{car[0]}.jpg')
                 if os.path.exists(car_photo_path):
                     car_pixmap = QPixmap(car_photo_path)
-                    car_photo_label.setPixmap(car_pixmap.scaled(150, 150, Qt.KeepAspectRatio))
+                    car_photo_label.setPixmap(car_pixmap.scaled(300, 300, Qt.KeepAspectRatio))
                 else:
                     car_photo_label.setText("Немає фото")
                 car_photo_label.setObjectName(f"CarPhotoLabel_{car[0]}")
-                car_layout.addWidget(car_photo_label)
+                car_info_layout.addWidget(car_photo_label)
 
                 car_info_label = QLabel(
                     f"Марка: {car[1]}\nМодель: {car[2]}\nРік: {car[3]}\nНомерний знак: {car[4]}\nVIN: {car[6]}")
-                car_layout.addWidget(car_info_label)
+                car_info_layout.addWidget(car_info_label)
 
-                upload_car_photo_button = QPushButton("Завантажити фото авто")
+                car_layout.addLayout(car_info_layout)  # Додаємо перший рядок до загального макету авто
+
+                # Другий рядок з кнопками "Замінити фото" та "Деталі"
+                buttons_layout = QHBoxLayout()  # Горизонтальний макет для кнопок
+                upload_car_photo_button = QPushButton("Замінити фото авто")
                 upload_car_photo_button.clicked.connect(lambda ch, car_id=car[0]: self.uploadCarPhoto(car_id))
-                car_layout.addWidget(upload_car_photo_button)
+                buttons_layout.addWidget(upload_car_photo_button)
 
                 details_button = QPushButton("Деталі")
                 details_button.clicked.connect(lambda ch, car=car: self.showCarDetails(car))
-                car_layout.addWidget(details_button)
+                buttons_layout.addWidget(details_button)
+
+                car_layout.addLayout(buttons_layout)  # Додаємо другий рядок до загального макету авто
 
                 car_frame.setLayout(car_layout)
                 scroll_layout.addWidget(car_frame)
@@ -219,32 +254,11 @@ class UserWindow(QMainWindow):
         except Exception as e:
             self.show_error_message(f"Сталася помилка при перевірці/створенні каталогу: {e}")
 
-    def uploadPhoto(self, user_id, label):
-        try:
-            path, _ = QFileDialog.getOpenFileName(self, "Вибрати фото", "", "Image files (*.jpg *.png)")
-            if path:
-                filename = os.path.join('user_photos', f'{user_id}.jpg')
-                self.ensure_directory_exists('user_photos')
-                if os.path.exists(filename):
-                    reply = QMessageBox.question(self, 'Підтвердження', 'Фото вже існує. Замінити його?',
-                                                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-                    if reply == QMessageBox.No:
-                        return
-                shutil.copy(path, filename)
-                pixmap = QPixmap(filename)
-                label.setPixmap(pixmap.scaled(200, 200, Qt.KeepAspectRatio))
-                conn = mysql.connector.connect(**DB_CONFIG)
-                cursor = conn.cursor()
-                cursor.execute("UPDATE Client SET ClientPhoto = %s WHERE ClientID = %s", (filename, user_id))
-                conn.commit()
-        except Exception as e:
-            self.show_error_message(f"Сталася помилка при завантаженні фото: {e}")
-
     def uploadCarPhoto(self, car_id):
         try:
             path, _ = QFileDialog.getOpenFileName(self, "Вибрати фото авто", "", "Image files (*.jpg *.png)")
             if path:
-                filename = os.path.join('car_photos', f'{car_id}.jpg')
+                filename = os.path.join('car_photos', f'Car_{car_id}.jpg')
                 self.ensure_directory_exists('car_photos')
                 if os.path.exists(filename):
                     reply = QMessageBox.question(self, 'Підтвердження', 'Фото авто вже існує. Замінити його?',
@@ -252,7 +266,12 @@ class UserWindow(QMainWindow):
                     if reply == QMessageBox.No:
                         return
                 shutil.copy(path, filename)
-                # Update the database path
+                # Обновляем QLabel с фото авто
+                car_photo_label = self.findChild(QLabel, f"CarPhotoLabel_{car_id}")
+                if car_photo_label:
+                    car_pixmap = QPixmap(path)
+                    car_photo_label.setPixmap(car_pixmap.scaled(300, 300, Qt.KeepAspectRatio))
+                # Обновляем путь к фото в базе данных
                 conn = mysql.connector.connect(**DB_CONFIG)
                 cursor = conn.cursor()
                 cursor.execute("UPDATE Car SET CarPhoto = %s WHERE CarID = %s", (filename, car_id))

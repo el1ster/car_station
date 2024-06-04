@@ -1,7 +1,7 @@
 import os
 from PyQt5.QtWidgets import (QMainWindow, QLabel, QVBoxLayout, QWidget, QTabWidget,
                              QPushButton, QHBoxLayout, QTableWidget, QTableWidgetItem,
-                             QLineEdit, QMessageBox, QFileDialog)
+                             QLineEdit, QMessageBox, QFileDialog, QHeaderView)
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtGui import QPixmap
 import mysql.connector
@@ -63,7 +63,7 @@ class CarDetailsWindow(QMainWindow):
         self.parent = parent
         self.access_level = access_level
         self.setWindowTitle(f"Детальна інформація про авто: {car_data[1]} {car_data[2]}")
-        self.setGeometry(200, 200, 400, 500)
+        self.setGeometry(200, 200, 500, 600)
         try:
             self.initUI()
         except Exception as e:
@@ -199,27 +199,33 @@ class AdminWindow(QMainWindow):
         try:
             layout = QVBoxLayout(self.main_tab)
 
+            # Горизонтальний макет для фото та інформації про адміністратора
+            admin_info_layout = QHBoxLayout()
+
             self.admin_info = QLabel(
                 f"ID: {self.admin_data[0]}\nФІО: {self.admin_data[5]}\nПосада: {self.admin_data[3]}\nРівень доступу: {self.admin_data[4]}",
                 self)
             self.admin_info.setAlignment(Qt.AlignCenter)
             self.admin_info.setStyleSheet("font-size: 16px;")
-            layout.addWidget(self.admin_info)
+            admin_info_layout.addWidget(self.admin_info)
 
             self.admin_photo = QLabel(self)
             if self.admin_data[6]:  # Assuming AdminPhoto is at index 6
                 pixmap = QPixmap(self.admin_data[6])
-                self.admin_photo.setPixmap(pixmap.scaled(300, 300, Qt.KeepAspectRatio))
+                self.admin_photo.setPixmap(pixmap.scaled(400, 400, Qt.KeepAspectRatio))
             else:
                 self.admin_photo.setText("Немає фото")
             self.admin_photo.setAlignment(Qt.AlignCenter)  # Центровка фото
-            layout.addWidget(self.admin_photo)
+            admin_info_layout.addWidget(self.admin_photo)
 
-            # Кнопка изменения фото
+            layout.addLayout(admin_info_layout)
+
+            # Кнопка зміни фото адміністратора
             change_photo_button = QPushButton("Змінити фото")
             change_photo_button.clicked.connect(self.changePhoto)
             layout.addWidget(change_photo_button)
 
+            # Вертикальний макет для кнопок
             buttons_layout = QVBoxLayout()
 
             cars_button = QPushButton("Показати всі автомобілі")
@@ -260,7 +266,7 @@ class AdminWindow(QMainWindow):
 
                 # Обновление фото в UI
                 pixmap = QPixmap(file_name)
-                self.admin_photo.setPixmap(pixmap.scaled(200, 200, Qt.KeepAspectRatio))
+                self.admin_photo.setPixmap(pixmap.scaled(400, 400, Qt.KeepAspectRatio))
         except Exception as e:
             self.show_error_message(f"Сталася помилка при зміні фото: {e}")
 
@@ -308,6 +314,8 @@ class AdminWindow(QMainWindow):
 
             self.cars_table = QTableWidget()
             layout.addWidget(self.cars_table)
+
+            self.cars_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
 
             self.loadCarsData()
         except Exception as e:
@@ -375,6 +383,8 @@ class AdminWindow(QMainWindow):
 
             self.users_table = QTableWidget()
             layout.addWidget(self.users_table)
+
+            self.users_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
 
             self.loadUsersData()
         except Exception as e:
