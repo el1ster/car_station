@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButto
 import mysql.connector
 from config import DB_CONFIG
 
+
 class EditWindow(QDialog):
     def __init__(self, data, is_car=True):
         super().__init__()
@@ -17,14 +18,14 @@ class EditWindow(QDialog):
     def initUI(self):
         try:
             self.setWindowTitle("Редагування даних")
-            self.setGeometry(100, 100, 400, 600)  # Увеличение размера окна
+            self.setGeometry(100, 100, 400, 600)
             layout = QVBoxLayout()
 
             form_layout = QFormLayout()
             self.inputs = []
 
             if self.is_car:
-                fields = ["CarID", "Make", "Model", "Year", "OwnerID", "LicensePlate", "VIN"]
+                fields = ["ID Авто", "Марка", "Модель", "Рік", "ID Власника", "Номерний знак", "VIN"]
                 for i, field in enumerate(fields):
                     label = QLabel(field)
                     line_edit = QLineEdit(str(self.data[i]))
@@ -40,7 +41,8 @@ class EditWindow(QDialog):
                 # Загрузка текущего статуса из таблицы Order
                 conn = mysql.connector.connect(**DB_CONFIG)
                 cursor = conn.cursor()
-                cursor.execute("SELECT Status FROM `Order` WHERE Car = %s ORDER BY OrderDate DESC LIMIT 1", (self.data[0],))
+                cursor.execute("SELECT Status FROM `Order` WHERE Car = %s ORDER BY OrderDate DESC LIMIT 1",
+                               (self.data[0],))
                 current_status = cursor.fetchone()
                 cursor.close()
                 conn.close()
@@ -52,7 +54,9 @@ class EditWindow(QDialog):
                 # Загрузка текущих услуг из таблицы OrderService
                 conn = mysql.connector.connect(**DB_CONFIG)
                 cursor = conn.cursor()
-                cursor.execute("SELECT Service FROM OrderService WHERE `Order` = (SELECT OrderID FROM `Order` WHERE Car = %s ORDER BY OrderDate DESC LIMIT 1)", (self.data[0],))
+                cursor.execute(
+                    "SELECT Service FROM OrderService WHERE `Order` = (SELECT OrderID FROM `Order` WHERE Car = %s ORDER BY OrderDate DESC LIMIT 1)",
+                    (self.data[0],))
                 current_services = cursor.fetchall()
                 current_services = [service[0] for service in current_services]
 
@@ -77,7 +81,7 @@ class EditWindow(QDialog):
                 layout.addLayout(services_layout)
 
             else:
-                fields = ["ClientID", "Name", "Surname", "Phone", "Email", "Login"]
+                fields = ["ID Кліента", "Ім'я", "Прізвище", "Телефон", "Email", "Логін"]
                 for i, field in enumerate(fields):
                     label = QLabel(field)
                     line_edit = QLineEdit(str(self.data[i]))
@@ -140,7 +144,8 @@ class EditWindow(QDialog):
                 cursor.execute("DELETE FROM OrderService WHERE `Order` = %s", (order_id,))
                 for service_id, checkbox in self.service_checkboxes:
                     if checkbox.isChecked():
-                        cursor.execute("INSERT INTO OrderService (`Order`, Service, Quantity) VALUES (%s, %s, %s)", (order_id, service_id, 1))
+                        cursor.execute("INSERT INTO OrderService (`Order`, Service, Quantity) VALUES (%s, %s, %s)",
+                                       (order_id, service_id, 1))
 
             else:
                 query = """

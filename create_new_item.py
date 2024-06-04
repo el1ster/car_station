@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButto
 import mysql.connector
 from config import DB_CONFIG
 
+
 class CreateNewItemWindow(QDialog):
     def __init__(self, is_car=True):
         super().__init__()
@@ -14,16 +15,17 @@ class CreateNewItemWindow(QDialog):
     def initUI(self):
         try:
             self.setWindowTitle("Створення нового запису")
-            self.setGeometry(100, 100, 400, 300)  # Updated size to fit the new form
+            self.setGeometry(100, 100, 400, 300)
             layout = QVBoxLayout()
 
             form_layout = QFormLayout()
             self.inputs = {}
 
             if self.is_car:
-                fields = ["Make", "Model", "Year", "OwnerID", "LicensePlate", "VIN"]
+                fields = ["Марка", "Модель", "Рік", "ID Власника", "Номерний знак", "VIN"]
             else:
-                fields = ["Name", "Surname", "Phone", "Email", "Login", "Password"]  # Added Password field and removed ClientPhoto
+                fields = ["Ім'я", "Прізвище", "Телефон", "Email", "Логін",
+                          "Пароль"]
 
             for field in fields:
                 label = QLabel(field)
@@ -53,11 +55,11 @@ class CreateNewItemWindow(QDialog):
                 VALUES (%s, %s, %s, %s, %s, %s)
                 """
                 data = (
-                    self.inputs["Make"].text(),
-                    self.inputs["Model"].text(),
-                    self.inputs["Year"].text(),
-                    self.inputs["OwnerID"].text(),
-                    self.inputs["LicensePlate"].text(),
+                    self.inputs["Марка"].text(),
+                    self.inputs["Модель"].text(),
+                    self.inputs["Рік"].text(),
+                    self.inputs["ID Власника"].text(),
+                    self.inputs["Номерний знак"].text(),
                     self.inputs["VIN"].text()
                 )
             else:
@@ -66,12 +68,12 @@ class CreateNewItemWindow(QDialog):
                 VALUES (%s, %s, %s, %s, %s, %s)
                 """
                 data = (
-                    self.inputs["Name"].text(),
-                    self.inputs["Surname"].text(),
-                    self.inputs["Phone"].text(),
+                    self.inputs["Ім'я"].text(),
+                    self.inputs["Прізвище"].text(),
+                    self.inputs["Телефон"].text(),
                     self.inputs["Email"].text(),
-                    self.inputs["Login"].text(),
-                    self.inputs["Password"].text()  # Added Password field
+                    self.inputs["Логін"].text(),
+                    self.inputs["Пароль"].text()
                 )
 
             cursor.execute(query, data)

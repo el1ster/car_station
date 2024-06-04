@@ -1,7 +1,7 @@
 import os
 from PyQt5.QtWidgets import (QMainWindow, QLabel, QVBoxLayout, QWidget, QTabWidget,
                              QPushButton, QHBoxLayout, QTableWidget, QTableWidgetItem,
-                             QLineEdit, QMessageBox)
+                             QLineEdit, QMessageBox, QFileDialog)
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtGui import QPixmap
 import mysql.connector
@@ -30,6 +30,7 @@ class SearchThread(QThread):
                 FROM Car 
                 WHERE Car.CarID LIKE %s OR Car.Make LIKE %s OR Car.Model LIKE %s 
                 OR Car.Year LIKE %s OR Car.LicensePlate LIKE %s OR Car.VIN LIKE %s
+                OR (SELECT Status FROM `Order` WHERE `Order`.Car = Car.CarID ORDER BY `Order`.OrderDate DESC LIMIT 1) LIKE %s
                 """
             elif self.search_type == "users":
                 query = """
@@ -39,8 +40,12 @@ class SearchThread(QThread):
                 OR Phone LIKE %s OR Email LIKE %s OR Login LIKE %s
                 """
             search_pattern = f"%{self.search_text}%"
-            cursor.execute(query, (search_pattern, search_pattern, search_pattern,
-                                   search_pattern, search_pattern, search_pattern))
+            if self.search_type == "cars":
+                cursor.execute(query, (search_pattern, search_pattern, search_pattern,
+                                       search_pattern, search_pattern, search_pattern, search_pattern))
+            else:
+                cursor.execute(query, (search_pattern, search_pattern, search_pattern,
+                                       search_pattern, search_pattern, search_pattern))
             results = cursor.fetchall()
             cursor.close()
             conn.close()
@@ -103,7 +108,8 @@ class CarDetailsWindow(QMainWindow):
             cursor.close()
             conn.close()
 
-            service_details = "\n\n".join([f"Послуга: {s[0]}\nОпис: {s[1]}\nЦіна: {s[2]}\nКількість: {s[3]}" for s in services])
+            service_details = "\n\n".join(
+                [f"Послуга: {s[0]}\nОпис: {s[1]}\nЦіна: {s[2]}\nКількість: {s[3]}" for s in services])
             if not service_details:
                 service_details = "Немає послуг"
             total_cost = sum(s[2] * s[3] for s in services)
@@ -193,18 +199,28 @@ class AdminWindow(QMainWindow):
         try:
             layout = QVBoxLayout(self.main_tab)
 
-            admin_info = QLabel(
-                f"ФІО: {self.admin_data[5]}\nПосада: {self.admin_data[3]}\nРівень доступу: {self.admin_data[4]}", self)
-            admin_info.setAlignment(Qt.AlignCenter)
-            layout.addWidget(admin_info)
+            self.admin_info = QLabel(
+                f"ID: {self.admin_data[0]}\nФІО: {self.admin_data[5]}\nПосада: {self.admin_data[3]}\nРівень доступу: {self.admin_data[4]}",
+                self)
+            self.admin_info.setAlignment(Qt.AlignCenter)
+            self.admin_info.setStyleSheet("font-size: 16px;")
+            layout.addWidget(self.admin_info)
 
+            self.admin_photo = QLabel(self)
             if self.admin_data[6]:  # Assuming AdminPhoto is at index 6
-                admin_photo = QLabel(self)
                 pixmap = QPixmap(self.admin_data[6])
-                admin_photo.setPixmap(pixmap.scaled(200, 200, Qt.KeepAspectRatio))
-                layout.addWidget(admin_photo)
+                self.admin_photo.setPixmap(pixmap.scaled(300, 300, Qt.KeepAspectRatio))
+            else:
+                self.admin_photo.setText("Немає фото")
+            self.admin_photo.setAlignment(Qt.AlignCenter)  # Центровка фото
+            layout.addWidget(self.admin_photo)
 
-            buttons_layout = QHBoxLayout()
+            # Кнопка изменения фото
+            change_photo_button = QPushButton("Змінити фото")
+            change_photo_button.clicked.connect(self.changePhoto)
+            layout.addWidget(change_photo_button)
+
+            buttons_layout = QVBoxLayout()
 
             cars_button = QPushButton("Показати всі автомобілі")
             cars_button.clicked.connect(lambda: self.tabs.setCurrentWidget(self.cars_tab))
@@ -214,19 +230,39 @@ class AdminWindow(QMainWindow):
             users_button.clicked.connect(lambda: self.tabs.setCurrentWidget(self.users_tab))
             buttons_layout.addWidget(users_button)
 
-            if self.admin_data[4] in [1, 3]:
-                new_user_button = QPushButton("Додати нового користувача")
-                new_user_button.clicked.connect(self.createNewUser)
-                buttons_layout.addWidget(new_user_button)
+            new_car_button = QPushButton("Додати нову машину")
+            new_car_button.clicked.connect(self.createNewCar)
+            buttons_layout.addWidget(new_car_button)
 
-            if self.admin_data[4] in [2, 3]:
-                new_car_button = QPushButton("Додати нову машину")
-                new_car_button.clicked.connect(self.createNewCar)
-                buttons_layout.addWidget(new_car_button)
+            new_user_button = QPushButton("Додати нового користувача")
+            new_user_button.clicked.connect(self.createNewUser)
+            buttons_layout.addWidget(new_user_button)
 
             layout.addLayout(buttons_layout)
         except Exception as e:
             self.show_error_message(f"Сталася помилка при ініціалізації головної вкладки: {e}")
+
+    def changePhoto(self):
+        try:
+            options = QFileDialog.Options()
+            file_name, _ = QFileDialog.getOpenFileName(self, "Виберіть фото", "", "Images (*.png *.xpm *.jpg)",
+                                                       options=options)
+            if file_name:
+                conn = mysql.connector.connect(**DB_CONFIG)
+                cursor = conn.cursor()
+                query = "UPDATE Admin SET AdminPhoto = %s WHERE AdminID = %s"
+                cursor.execute(query, (file_name, self.admin_data[0]))
+                conn.commit()
+                cursor.close()
+                conn.close()
+
+                QMessageBox.information(self, "Успіх", "Фото успішно змінено")
+
+                # Обновление фото в UI
+                pixmap = QPixmap(file_name)
+                self.admin_photo.setPixmap(pixmap.scaled(200, 200, Qt.KeepAspectRatio))
+        except Exception as e:
+            self.show_error_message(f"Сталася помилка при зміні фото: {e}")
 
     def createNewCar(self):
         if self.admin_data[4] in [2, 3]:
@@ -408,7 +444,8 @@ class AdminWindow(QMainWindow):
                 cursor.close()
                 conn.close()
 
-                service_details = "\n\n".join([f"Послуга: {s[0]}\nОпис: {s[1]}\nЦіна: {s[2]}\nКількість: {s[3]}" for s in services])
+                service_details = "\n\n".join(
+                    [f"Послуга: {s[0]}\nОпис: {s[1]}\nЦіна: {s[2]}\nКількість: {s[3]}" for s in services])
                 if not service_details:
                     service_details = "Немає послуг"
 
@@ -445,8 +482,9 @@ class AdminWindow(QMainWindow):
                     cursor = conn.cursor()
 
                     # Видалити пов'язані записи з таблиці orderservice
-                    cursor.execute("DELETE FROM orderservice WHERE `Order` IN (SELECT OrderID FROM `order` WHERE Car = %s)",
-                                   (car_id,))
+                    cursor.execute(
+                        "DELETE FROM orderservice WHERE `Order` IN (SELECT OrderID FROM `order` WHERE Car = %s)",
+                        (car_id,))
 
                     # Видалити пов'язані записи з таблиці order
                     cursor.execute("DELETE FROM `order` WHERE Car = %s", (car_id,))

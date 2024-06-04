@@ -21,12 +21,12 @@ class LoginWindow(QMainWindow):
         layout = QVBoxLayout()
 
         self.login_input = QLineEdit(self)
-        self.login_input.setPlaceholderText("Login")
+        self.login_input.setPlaceholderText("Логін")
         layout.addWidget(self.login_input)
 
         self.password_input = QLineEdit(self)
         self.password_input.setEchoMode(QLineEdit.Password)
-        self.password_input.setPlaceholderText("Password")
+        self.password_input.setPlaceholderText("Пароль")
         layout.addWidget(self.password_input)
 
         self.user_button = QPushButton("Війти як користувач", self)
@@ -73,8 +73,8 @@ class LoginWindow(QMainWindow):
         try:
             login = self.login_input.text()
             password = self.password_input.text()
-            loginA = "adminSales"
-            passwordA = "sales123"
+            loginA = "adminManager"
+            passwordA = "manager123"
             query = "SELECT * FROM Admin WHERE Login = %s AND Password = %s"
             self.cursor.execute(query, (loginA, passwordA))
             result = self.cursor.fetchone()

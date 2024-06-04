@@ -1,6 +1,9 @@
+/* General styling for the application */
 QWidget {
     background-color: #333;
     color: #ddd;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
 }
 
 QPushButton {
@@ -9,10 +12,15 @@ QPushButton {
     border-radius: 5px;
     padding: 5px;
     color: white;
+    font-weight: bold;
 }
 
 QPushButton:hover {
     background-color: #777;
+}
+
+QPushButton:pressed {
+    background-color: #444;
 }
 
 QLineEdit {
@@ -21,20 +29,26 @@ QLineEdit {
     padding: 5px;
     background-color: #222;
     color: #ddd;
+    font-size: 14px;
 }
 
 QLabel {
     color: #ccc;
+    font-size: 14px;
 }
 
 QTabWidget::tab-bar {
-    alignment: center;
+    alignment: left;
 }
 
 QTabBar::tab {
+    background-color: #444;
+    border: 1px solid #555;
+    border-radius: 5px;
     min-width: 100px;
     margin: 2px;
     padding: 10px;
+    font-size: 14px;
 }
 
 QTabBar::tab:hover {
@@ -50,6 +64,7 @@ QTableWidget {
     background-color: #333;
     color: #ddd;
     gridline-color: #444;
+    font-size: 14px;
 }
 
 QTableWidget::item {
@@ -62,26 +77,162 @@ QHeaderView::section {
     color: #ddd;
     padding: 5px;
     border: none;
+    font-weight: bold;
 }
 
-QScrollBar:vertical {
+QScrollBar:vertical, QScrollBar:horizontal {
     border: none;
     background: #333;
     width: 14px;
     margin: 16px 0 16px 0;
 }
 
-QScrollBar::handle:vertical {
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
     background: #555;
     min-height: 20px;
     border-radius: 5px;
 }
 
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
     background: none;
     border: none;
 }
 
-QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical,
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
     background: none;
+}
+
+QMenuBar {
+    background-color: #444;
+    color: #ddd;
+}
+
+QMenuBar::item {
+    background: transparent;
+    padding: 5px;
+}
+
+QMenuBar::item:selected {
+    background: #555;
+}
+
+QMenu {
+    background-color: #444;
+    color: #ddd;
+    border: 1px solid #555;
+}
+
+QMenu::item {
+    background-color: transparent;
+    padding: 5px 25px;
+}
+
+QMenu::item:selected {
+    background-color: #666;
+}
+
+QToolTip {
+    background-color: #444;
+    color: #ddd;
+    border: 1px solid #555;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+QCheckBox {
+    padding: 5px;
+    font-size: 14px;
+}
+
+QCheckBox::indicator {
+    width: 20px;
+    height: 20px;
+}
+
+QCheckBox::indicator:unchecked {
+    background-color: #555;
+    border: 1px solid #666;
+    border-radius: 5px;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #777;
+    border: 1px solid #666;
+    border-radius: 5px;
+}
+
+QRadioButton {
+    padding: 5px;
+    font-size: 14px;
+}
+
+QRadioButton::indicator {
+    width: 20px;
+    height: 20px;
+}
+
+QRadioButton::indicator:unchecked {
+    background-color: #555;
+    border: 1px solid #666;
+    border-radius: 10px;
+}
+
+QRadioButton::indicator:checked {
+    background-color: #777;
+    border: 1px solid #666;
+    border-radius: 10px;
+}
+
+QComboBox {
+    background-color: #222;
+    border: 2px solid #555;
+    border-radius: 5px;
+    padding: 5px;
+    color: #ddd;
+    font-size: 14px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #333;
+    border: 2px solid #555;
+    selection-background-color: #555;
+    color: #ddd;
+}
+
+QGroupBox {
+    border: 2px solid #555;
+    border-radius: 5px;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top center;
+    padding: 0 5px;
+}
+
+QTextEdit, QPlainTextEdit {
+    background-color: #222;
+    border: 2px solid #555;
+    border-radius: 5px;
+    color: #ddd;
+    padding: 5px;
+    font-size: 14px;
+}
+
+QProgressBar {
+    background-color: #222;
+    border: 2px solid #555;
+    border-radius: 5px;
+    text-align: center;
+    color: #ddd;
+    font-size: 14px;
+}
+
+QProgressBar::chunk {
+    background-color: #555;
+    border-radius: 5px;
 }
