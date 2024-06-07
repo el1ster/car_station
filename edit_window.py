@@ -129,18 +129,24 @@ class EditWindow(QDialog):
                     updated_data[1], updated_data[2], int(updated_data[3]), int(updated_data[4]), updated_data[5],
                     updated_data[6], int(updated_data[0])))
 
-                # Обновление статуса в таблице Order
+                # Обновлення статусу в таблиці Order
                 status = self.status_combo.currentText()
                 query = """
-                UPDATE `Order` SET Status = %s WHERE Car = %s ORDER BY OrderDate DESC LIMIT 1
+                SELECT OrderID FROM `Order` WHERE Car = %s ORDER BY OrderDate DESC LIMIT 1
                 """
-                cursor.execute(query, (status, int(updated_data[0])))
+                cursor.execute(query, (int(updated_data[0]),))
+                order_id = cursor.fetchone()
 
-                # Обновление услуг в таблице OrderService
-                query = "SELECT OrderID FROM `Order` WHERE Car = %s ORDER BY OrderDate DESC LIMIT 1"
-                cursor.execute(query, (updated_data[0],))
-                order_id = cursor.fetchone()[0]
+                if order_id:
+                    order_id = order_id[0]
+                    query = "UPDATE `Order` SET Status = %s WHERE OrderID = %s"
+                    cursor.execute(query, (status, order_id))
+                else:
+                    query = "INSERT INTO `Order` (Car, Status, OrderDate) VALUES (%s, %s, NOW())"
+                    cursor.execute(query, (int(updated_data[0]), status))
+                    order_id = cursor.lastrowid
 
+                # Обновлення послуг в таблиці OrderService
                 cursor.execute("DELETE FROM OrderService WHERE `Order` = %s", (order_id,))
                 for service_id, checkbox in self.service_checkboxes:
                     if checkbox.isChecked():
@@ -156,14 +162,14 @@ class EditWindow(QDialog):
                     updated_data[1], updated_data[2], updated_data[3], updated_data[4], updated_data[5],
                     int(updated_data[0])))
 
-                # Обновление пароля, если введен
+                # Обновлення пароля, якщо введено
                 if self.password_input.text():
-                    # Проверка текущего пароля
+                    # Перевірка поточного пароля
                     query = "SELECT Password FROM Client WHERE ClientID = %s"
                     cursor.execute(query, (int(updated_data[0]),))
-                    current_password = cursor.fetchone()[0]
+                    current_password = cursor.fetchone()
 
-                    if self.current_password_input.text() == current_password:
+                    if current_password and self.current_password_input.text() == current_password[0]:
                         query = "UPDATE Client SET Password = %s WHERE ClientID = %s"
                         cursor.execute(query, (self.password_input.text(), int(updated_data[0])))
                     else:

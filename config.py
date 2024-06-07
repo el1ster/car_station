@@ -9,5 +9,5 @@ DB_CONFIG = {
 
 STYLE_SHEET_PATH = "style.qss"
 
-rootL = "root"
-rootP = "root"
+rootl = "root"
+rootp = "root"

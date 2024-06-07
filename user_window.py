@@ -38,13 +38,11 @@ class CarDetailsWindow(QMainWindow):
                 car_photo_label.setText("Немає фото")
             layout.addWidget(car_photo_label)
 
-            # Поле для отображения описания
             detail_label = QTextEdit(self)
             detail_label.setReadOnly(True)
             layout.addWidget(QLabel("Опис ремонту:"))
             layout.addWidget(detail_label)
 
-            # Добавление статуса из таблицы Order
             conn = mysql.connector.connect(**DB_CONFIG)
             cursor = conn.cursor()
             cursor.execute("SELECT Status FROM `Order` WHERE Car = %s ORDER BY OrderDate DESC LIMIT 1",
@@ -53,7 +51,6 @@ class CarDetailsWindow(QMainWindow):
             status_label = QLabel(f"Статус: {order_status[0]}" if order_status else "Статус: Немає даних")
             layout.addWidget(status_label)
 
-            # Получение услуг и их стоимости
             cursor.execute("""
                 SELECT s.ServiceName, s.Description, s.Cost 
                 FROM orderservice os
@@ -162,12 +159,10 @@ class UserWindow(QMainWindow):
                     if reply == QMessageBox.No:
                         return
                 shutil.copy(path, filename)
-                # Оновлюємо QLabel з фото користувача, якщо він існує, встановлюючи нове зображення за допомогою setPixmap
                 photo_label = self.findChild(QLabel, "PhotoLabel")
                 if photo_label:
                     pixmap = QPixmap(path)
                     photo_label.setPixmap(pixmap.scaled(400, 400, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-                # Оновлюємо шлях до фото в базі даних
                 conn = mysql.connector.connect(**DB_CONFIG)
                 cursor = conn.cursor()
                 cursor.execute("UPDATE Client SET ClientPhoto = %s WHERE ClientID = %s", (filename, user_id))
@@ -199,10 +194,9 @@ class UserWindow(QMainWindow):
 
             for car in cars:
                 car_frame = QFrame()
-                car_layout = QVBoxLayout()  # Вертикальний макет для кожного автомобіля
+                car_layout = QVBoxLayout()
 
-                # Перший рядок з фото та описом автомобіля
-                car_info_layout = QHBoxLayout()  # Горизонтальний макет для фото та опису
+                car_info_layout = QHBoxLayout()
                 car_photo_label = QLabel()
                 car_photo_path = os.path.join('car_photos', f'Car_{car[0]}.jpg')
                 if os.path.exists(car_photo_path):
@@ -217,10 +211,9 @@ class UserWindow(QMainWindow):
                     f"Марка: {car[1]}\nМодель: {car[2]}\nРік: {car[3]}\nНомерний знак: {car[4]}\nVIN: {car[6]}")
                 car_info_layout.addWidget(car_info_label)
 
-                car_layout.addLayout(car_info_layout)  # Додаємо перший рядок до загального макету авто
+                car_layout.addLayout(car_info_layout)
 
-                # Другий рядок з кнопками "Замінити фото" та "Деталі"
-                buttons_layout = QHBoxLayout()  # Горизонтальний макет для кнопок
+                buttons_layout = QHBoxLayout()
                 upload_car_photo_button = QPushButton("Замінити фото авто")
                 upload_car_photo_button.clicked.connect(lambda ch, car_id=car[0]: self.uploadCarPhoto(car_id))
                 buttons_layout.addWidget(upload_car_photo_button)
@@ -229,7 +222,7 @@ class UserWindow(QMainWindow):
                 details_button.clicked.connect(lambda ch, car=car: self.showCarDetails(car))
                 buttons_layout.addWidget(details_button)
 
-                car_layout.addLayout(buttons_layout)  # Додаємо другий рядок до загального макету авто
+                car_layout.addLayout(buttons_layout)
 
                 car_frame.setLayout(car_layout)
                 scroll_layout.addWidget(car_frame)
@@ -266,12 +259,10 @@ class UserWindow(QMainWindow):
                     if reply == QMessageBox.No:
                         return
                 shutil.copy(path, filename)
-                # Обновляем QLabel с фото авто
                 car_photo_label = self.findChild(QLabel, f"CarPhotoLabel_{car_id}")
                 if car_photo_label:
                     car_pixmap = QPixmap(path)
                     car_photo_label.setPixmap(car_pixmap.scaled(300, 300, Qt.KeepAspectRatio))
-                # Обновляем путь к фото в базе данных
                 conn = mysql.connector.connect(**DB_CONFIG)
                 cursor = conn.cursor()
                 cursor.execute("UPDATE Car SET CarPhoto = %s WHERE CarID = %s", (filename, car_id))

@@ -8,6 +8,7 @@ import mysql.connector
 from config import STYLE_SHEET_PATH, DB_CONFIG
 from edit_window import EditWindow
 from create_new_item import CreateNewItemWindow
+import shutil
 
 
 class SearchThread(QThread):
@@ -210,8 +211,9 @@ class AdminWindow(QMainWindow):
             admin_info_layout.addWidget(self.admin_info)
 
             self.admin_photo = QLabel(self)
-            if self.admin_data[6]:  # Assuming AdminPhoto is at index 6
-                pixmap = QPixmap(self.admin_data[6])
+            photo_path = os.path.join('admin_photos', f'Admin_{self.admin_data[0]}.jpg')
+            if os.path.exists(photo_path):
+                pixmap = QPixmap(photo_path)
                 self.admin_photo.setPixmap(pixmap.scaled(400, 400, Qt.KeepAspectRatio))
             else:
                 self.admin_photo.setText("Немає фото")
@@ -254,19 +256,28 @@ class AdminWindow(QMainWindow):
             file_name, _ = QFileDialog.getOpenFileName(self, "Виберіть фото", "", "Images (*.png *.xpm *.jpg)",
                                                        options=options)
             if file_name:
+                filename = os.path.join('admin_photos', f'Admin_{self.admin_data[0]}.jpg')
+                os.makedirs('admin_photos', exist_ok=True)
+                if os.path.exists(filename):
+                    reply = QMessageBox.question(self, 'Підтвердження', 'Фото адміністратора вже існує. Замінити його?',
+                                                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                    if reply == QMessageBox.No:
+                        return
+                shutil.copy(file_name, filename)
+
+                # Оновлюємо QLabel з фото адміністратора
+                pixmap = QPixmap(filename)
+                self.admin_photo.setPixmap(pixmap.scaled(400, 400, Qt.KeepAspectRatio))
+
+                # Оновлюємо шлях до фото в базі даних
                 conn = mysql.connector.connect(**DB_CONFIG)
                 cursor = conn.cursor()
-                query = "UPDATE Admin SET AdminPhoto = %s WHERE AdminID = %s"
-                cursor.execute(query, (file_name, self.admin_data[0]))
+                cursor.execute("UPDATE Admin SET AdminPhoto = %s WHERE AdminID = %s", (filename, self.admin_data[0]))
                 conn.commit()
                 cursor.close()
                 conn.close()
 
                 QMessageBox.information(self, "Успіх", "Фото успішно змінено")
-
-                # Обновление фото в UI
-                pixmap = QPixmap(file_name)
-                self.admin_photo.setPixmap(pixmap.scaled(400, 400, Qt.KeepAspectRatio))
         except Exception as e:
             self.show_error_message(f"Сталася помилка при зміні фото: {e}")
 
